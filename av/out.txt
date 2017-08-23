@@ -1,0 +1,169 @@
+File "../myPv/av.pv", line 106, character 6 - line 106, character 10:
+Warning: identifier ucsk rebound
+File "../myPv/av.pv", line 107, character 6 - line 107, character 10:
+Warning: identifier uvsk rebound
+File "../myPv/av.pv", line 128, character 6 - line 128, character 10:
+Warning: identifier ucsk rebound
+File "../myPv/av.pv", line 140, character 6 - line 140, character 10:
+Warning: identifier vcsk rebound
+File "../myPv/av.pv", line 153, character 23 - line 153, character 26:
+Warning: identifier VID rebound
+File "../myPv/av.pv", line 158, character 7 - line 158, character 11:
+Warning: identifier vcsk rebound
+File "../myPv/av.pv", line 159, character 7 - line 159, character 11:
+Warning: identifier uvsk rebound
+Linear part:
+add(x_29,y_30) = add(y_30,x_29)
+exp(exp(g,x_27),y_28) = exp(exp(g,y_28),x_27)
+mul(x_31,y_32) = mul(y_32,x_31)
+Completing equations...
+Completed equations:
+mul(x_31,y_32) = mul(y_32,x_31)
+exp(exp(g,x_27),y_28) = exp(exp(g,y_28),x_27)
+add(x_29,y_30) = add(y_30,x_29)
+Convergent part:
+Completing equations...
+Completed equations:
+Process:
+{1}new CID: bitstring;
+{2}new UID: bitstring;
+{3}new VID: bitstring;
+{4}new l: bitstring;
+{5}new SCN: bitstring;
+{6}new PW: bitstring;
+{7}new bio_135: biometric;
+{8}new s: key;
+{9}new k: key;
+{10}new ri: bitstring;
+{11}new rj: bitstring;
+{12}let a: bitstring = Hash(Concat(Concat(UID,key2(k)),ri)) in
+{13}let b: bitstring = Hash(Concat(SCN,key2(k))) in
+{14}let S: G = exp(g,key2exponent(s)) in
+{15}let tp: template = TemplateGen(bio_135) in
+{16}let bk: key = KeyGen(bio_135) in
+{17}let c: bitstring = Hash(Mod(Hash(Concat(Concat(UID,PW),key2(bk))),l)) in
+{18}let A: bitstring = XOR(a,Hash(Concat(Concat(UID,PW),key2(bk)))) in
+{19}let B: bitstring = XOR(b,Hash(Concat(Concat(UID,PW),key2(bk)))) in
+{20}let vk: key = bit2key(Hash(Concat(Concat(VID,key2(k)),rj))) in
+(
+    {21}!
+    {22}let bk': key = KeyRel(bio_135,tp) in
+    {23}let c': bitstring = Hash(Mod(Hash(Concat(Concat(UID,PW),key2(bk'))),l)) in
+    {24}if (c' = c) then
+    {25}event scAccept(user);
+    {26}let a_136: bitstring = XORagain(A,Hash(Concat(Concat(UID,PW),key2(bk')))) in
+    {27}let b_137: bitstring = XORagain(B,Hash(Concat(Concat(UID,PW),key2(bk')))) in
+    {28}new x_138: exponent;
+    {29}new nonce1: nonce;
+    {30}let X: G = exp(g,x_138) in
+    {31}let d: exponent = bit2exponent(Hash(Concat(Concat(G2(X),UID),CID))) in
+    {32}let M1: G = exp(g,add(bit2exponent(a_136),mul(x_138,d))) in
+    {33}let ps: G = exp(S,add(bit2exponent(a_136),mul(x_138,d))) in
+    {34}let e: bitstring = Hash(Concat(Concat(Concat(UID,a_136),b_137),nonce2bit(nonce1))) in
+    {35}let pk: bitstring = Hash(Concat(Concat(G2(ps),G2(M1)),CID)) in
+    {36}let M2: bitstring = enc(Hash(Concat(Concat(Concat(UID,G2(X)),e),VID)),bit2key(pk)) in
+    {37}out(c_uc, (M1,M2,nonce1,true));
+    {38}in(c_uc, (Y: G,M6: bitstring,nonce2: nonce,nonce3: nonce));
+    {39}let psk: G = exp(Y,x_138) in
+    {40}let M6': bitstring = Hash(Concat(Concat(Concat(Concat(Concat(Concat(Concat(Concat(UID,CID),G2(Y)),pk),a_136),G2(psk)),nonce2bit(nonce1)),nonce2bit(nonce2)),nonce2bit(nonce3))) in
+    {41}if (M6 = M6') then
+    {42}let tk: bitstring = Hash(Concat(Concat(Concat(Concat(UID,VID),CID),G2(psk)),nonce2bit(nonce2))) in
+    {43}let ucsk_139: bitstring = Hash(Concat(Concat(Concat(Concat(Concat(Concat(UID,CID),G2(X)),G2(Y)),pk),a_136),G2(psk))) in
+    {44}let uvsk_140: bitstring = Hash(Concat(Concat(Concat(Concat(Concat(UID,VID),CID),tk),nonce2bit(nonce2)),nonce2bit(nonce3))) in
+    {45}event userGen(center,vehicle)
+) | (
+    {46}!
+    {47}in(c_uc, (M1_141: G,M2_142: bitstring,nonce1_143: nonce,isFresh: bool));
+    {48}if checkFresh(nonce1_143,isFresh) then
+    {49}let ps_144: G = exp(M1_141,key2exponent(s)) in
+    {50}let pk_145: bitstring = Hash(Concat(Concat(G2(ps_144),G2(M1_141)),CID)) in
+    {51}let (temp1: bitstring,VID_146: bitstring) = Split(dec(M2_142,bit2key(pk_145))) in
+    {52}let (temp2: bitstring,e_147: bitstring) = Split(temp1) in
+    {53}let (UID_148: bitstring,bitX: bitstring) = Split(temp2) in
+    {54}let X_149: G = bit2G(bitX) in
+    {55}let a_150: bitstring = Hash(Concat(Concat(UID_148,key2(k)),ri)) in
+    {56}let b_151: bitstring = Hash(Concat(SCN,key2(k))) in
+    {57}let d_152: bitstring = Hash(Concat(Concat(bitX,UID_148),CID)) in
+    {58}let e': bitstring = Hash(Concat(Concat(Concat(UID_148,a_150),b_151),nonce2bit(nonce1_143))) in
+    {59}if (e_147 = e') then
+    {60}new y_153: exponent;
+    {61}new nonce2_154: nonce;
+    {62}let Y_155: G = exp(g,y_153) in
+    {63}let psk_156: G = exp(X_149,y_153) in
+    {64}let ucsk_157: bitstring = Hash(Concat(Concat(Concat(Concat(Concat(Concat(UID_148,CID),bitX),G2(Y_155)),pk_145),a_150),G2(psk_156))) in
+    {65}event centerAcceptGen(user);
+    {66}let vk_158: key = bit2key(Hash(Concat(Concat(VID_146,key2(k)),rj))) in
+    {67}let tk_159: bitstring = Hash(Concat(Concat(Concat(Concat(UID_148,VID_146),CID),G2(psk_156)),nonce2bit(nonce2_154))) in
+    {68}let M3: bitstring = enc(Concat(Concat(Concat(Concat(Concat(UID_148,VID_146),CID),tk_159),nonce2bit(nonce1_143)),nonce2bit(nonce2_154)),vk_158) in
+    {69}let M4: bitstring = Hash(Concat(Concat(Concat(Concat(Concat(Concat(UID_148,VID_146),CID),tk_159),nonce2bit(nonce1_143)),nonce2bit(nonce2_154)),key2(vk_158))) in
+    {70}out(c_cv, (M3,M4));
+    {71}in(c_cv, (nonce3_160: nonce,M5: bitstring,n3IsFresh: bool));
+    {72}if checkFresh(nonce3_160,n3IsFresh) then
+    {73}let M5': bitstring = Hash(Concat(Concat(Concat(Concat(Concat(UID_148,VID_146),CID),nonce2bit(nonce1_143)),nonce2bit(nonce3_160)),key2(vk_158))) in
+    {74}let vcsk_161: bitstring = Hash(Concat(Concat(Concat(Concat(VID_146,CID),nonce2bit(nonce2_154)),nonce2bit(nonce3_160)),key2(vk_158))) in
+    {75}event centerGen(vehicle);
+    {76}let M6_162: bitstring = Hash(Concat(Concat(Concat(Concat(Concat(Concat(Concat(Concat(UID_148,CID),G2(Y_155)),pk_145),a_150),G2(psk_156)),nonce2bit(nonce1_143)),nonce2bit(nonce2_154)),nonce2bit(nonce3_160))) in
+    {77}out(c_uc, (Y_155,M6_162,nonce2_154,nonce3_160))
+) | (
+    {78}!
+    {79}in(c_cv, (M3_163: bitstring,M4_164: bitstring));
+    {80}let (temp1_165: bitstring,vkBit: bitstring) = Split(dec(M3_163,vk)) in
+    {81}let (temp2_166: bitstring,nonce2Bit: bitstring) = Split(temp1_165) in
+    {82}let (temp3: bitstring,nonce1Bit: bitstring) = Split(temp2_166) in
+    {83}let (temp4: bitstring,tk_167: bitstring) = Split(temp3) in
+    {84}let (temp5: bitstring,CID_168: bitstring) = Split(temp4) in
+    {85}let (UID_169: bitstring,VID_170: bitstring) = Split(temp5) in
+    {86}let M4': bitstring = Hash(Concat(Concat(Concat(Concat(Concat(Concat(UID_169,VID_170),CID_168),tk_167),nonce1Bit),nonce2Bit),key2(vk))) in
+    {87}if (M4_164 = M4') then
+    {88}new nonce3_171: nonce;
+    {89}let vcsk_172: bitstring = Hash(Concat(Concat(Concat(Concat(VID_170,CID_168),nonce2Bit),nonce2bit(nonce3_171)),key2(vk))) in
+    {90}let uvsk_173: bitstring = Hash(Concat(Concat(Concat(Concat(Concat(UID_169,VID_170),CID_168),tk_167),nonce2Bit),nonce2bit(nonce3_171))) in
+    {91}event vehicleGen(center,user);
+    {92}let M5_174: bitstring = Hash(Concat(Concat(Concat(Concat(Concat(UID_169,VID_170),CID_168),nonce1Bit),nonce2bit(nonce3_171)),key2(vk))) in
+    {93}out(c_cv, (nonce3_171,M5_174,true))
+)
+
+-- Query event(centerAcceptGen(user[])) ==> event(scAccept(user[]))
+Completing...
+200 rules inserted. The rule base contains 196 rules. 20 rules in the queue.
+400 rules inserted. The rule base contains 390 rules. 17 rules in the queue.
+ok, secrecy assumption verified: fact unreachable attacker(s[])
+ok, secrecy assumption verified: fact unreachable attacker(k[])
+Starting query event(centerAcceptGen(user[])) ==> event(scAccept(user[]))
+RESULT event(centerAcceptGen(user[])) ==> event(scAccept(user[])) is true.
+-- Query inj-event(vehicleGen(center[],user[])) ==> inj-event(centerAcceptGen(user[]))
+Completing...
+200 rules inserted. The rule base contains 194 rules. 19 rules in the queue.
+400 rules inserted. The rule base contains 377 rules. 15 rules in the queue.
+ok, secrecy assumption verified: fact unreachable attacker(s[])
+ok, secrecy assumption verified: fact unreachable attacker(k[])
+Starting query inj-event(vehicleGen(center[],user[])) ==> inj-event(centerAcceptGen(user[]))
+RESULT inj-event(vehicleGen(center[],user[])) ==> inj-event(centerAcceptGen(user[])) is true.
+-- Query inj-event(centerGen(vehicle[])) ==> inj-event(vehicleGen(center[],user[]))
+Completing...
+200 rules inserted. The rule base contains 196 rules. 20 rules in the queue.
+400 rules inserted. The rule base contains 390 rules. 17 rules in the queue.
+ok, secrecy assumption verified: fact unreachable attacker(s[])
+ok, secrecy assumption verified: fact unreachable attacker(k[])
+Starting query inj-event(centerGen(vehicle[])) ==> inj-event(vehicleGen(center[],user[]))
+RESULT inj-event(centerGen(vehicle[])) ==> inj-event(vehicleGen(center[],user[])) is true.
+-- Query inj-event(userGen(center[],vehicle[])) ==> inj-event(centerGen(vehicle[]))
+Completing...
+200 rules inserted. The rule base contains 196 rules. 18 rules in the queue.
+400 rules inserted. The rule base contains 378 rules. 11 rules in the queue.
+ok, secrecy assumption verified: fact unreachable attacker(s[])
+ok, secrecy assumption verified: fact unreachable attacker(k[])
+Starting query inj-event(userGen(center[],vehicle[])) ==> inj-event(centerGen(vehicle[]))
+RESULT inj-event(userGen(center[],vehicle[])) ==> inj-event(centerGen(vehicle[])) is true.
+-- Query not attacker(ucsk[]); not attacker(uvsk[]); not attacker(vcsk[])
+Completing...
+200 rules inserted. The rule base contains 196 rules. 18 rules in the queue.
+400 rules inserted. The rule base contains 378 rules. 11 rules in the queue.
+ok, secrecy assumption verified: fact unreachable attacker(s[])
+ok, secrecy assumption verified: fact unreachable attacker(k[])
+Starting query not attacker(ucsk[])
+RESULT not attacker(ucsk[]) is true.
+Starting query not attacker(uvsk[])
+RESULT not attacker(uvsk[]) is true.
+Starting query not attacker(vcsk[])
+RESULT not attacker(vcsk[]) is true.

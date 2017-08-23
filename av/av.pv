@@ -55,7 +55,6 @@ fun checkFresh(nonce, bool): bool
 
 
 (* Secrecy assumptions *)
-not attacker(new g).
 not attacker(new s).
 not attacker(new k).
 
@@ -65,10 +64,10 @@ free center: Center.
 free vehicle: Vehicle.
 
 (* Queries *)
-free SKcc: key[private].
+free ucsk, uvsk, vcsk: key[private].
 query attacker(ucsk);
-		attacker(uvsk);
-		attacker(vcsk);
+    attacker(uvsk);
+    attacker(vcsk).
 
 event scAccept(User).
 event centerAcceptGen(User).
@@ -78,7 +77,7 @@ event userGen(Center, Vehicle).
 
 query inj-event(userGen(center, vehicle)) ==> inj-event(centerGen(vehicle)).
 query inj-event(centerGen(vehicle)) ==> inj-event(vehicleGen(center, user)).
-query inj-event(vehicleGen(center, user)) ==> inj-event(centerAccept(user)).
+query inj-event(vehicleGen(center, user)) ==> inj-event(centerAcceptGen(user)).
 query event(centerAcceptGen(user)) ==> event(scAccept(user)).
 
 let processUser(S: G, UID': bitstring, PW': bitstring, bio': biometric, tp: template, l:bitstring, c: bitstring, A: bitstring, B: bitstring, CID: bitstring, VID: bitstring) =
@@ -96,17 +95,17 @@ let processUser(S: G, UID': bitstring, PW': bitstring, bio': biometric, tp: temp
 	let ps = exp(S, add(bit2exponent(a), mul(x, d))) in
 	let e = Hash(Concat(Concat(Concat(UID', a), b), nonce2bit(nonce1))) in
 	let pk = Hash(Concat(Concat(G2(ps), G2(M1)), CID)) in
-	let M2 = enc(Hash(Concat(Concat(Concat(ID', G2(X)), e), VID)), bit2key(pk)) in
+	let M2 = enc(Hash(Concat(Concat(Concat(UID', G2(X)), e), VID)), bit2key(pk)) in
 	out(c_uc, (M1, M2, nonce1, true));
 
 	in(c_uc, (Y: G, M6: bitstring, nonce2: nonce, nonce3: nonce));
 	let psk = exp(Y, x) in
-	let M6' = Hash(Concat(Concat(Concat(Concat(Concat(Concat(Concat(Concat(UID, CID), G2(Y)), pk), a), G2(psk)), nonce2bit(nonce1)), nonce2bit(nonce2)), nonce2bit(nonce3))) in
+	let M6' = Hash(Concat(Concat(Concat(Concat(Concat(Concat(Concat(Concat(UID', CID), G2(Y)), pk), a), G2(psk)), nonce2bit(nonce1)), nonce2bit(nonce2)), nonce2bit(nonce3))) in
 	if M6 = M6' then
-	let tk = Hash(Concat(Concat(Concat(Concat(UID, VID), CID), G2(psk)), nonce2bit(nonce2))) in
-	let ucsk = Hash(Concat(Concat(Concat(Concat(Concat(Concat(UID, CID), G2(X)), G2(Y)), pk), a), G2(psk))) in
-	let uvsk = Hash(Concat(Concat(Concat(Concat(Concat(Concat(UID, VID), CID), tk), nonce2bit(nonce2)), nonce2bit(nonce3))) in
-	event userGen(center, vehicle);
+	let tk = Hash(Concat(Concat(Concat(Concat(UID', VID), CID), G2(psk)), nonce2bit(nonce2))) in
+	let ucsk = Hash(Concat(Concat(Concat(Concat(Concat(Concat(UID', CID), G2(X)), G2(Y)), pk), a), G2(psk))) in
+	let uvsk = Hash(Concat(Concat(Concat(Concat(Concat(UID', VID), CID), tk), nonce2bit(nonce2)), nonce2bit(nonce3))) in
+	event userGen(center, vehicle).
 
 let processCenter(s: key, k:key, SCN: bitstring, ri: bitstring, rj: bitstring, CID: bitstring) = 
 	in(c_uc, (M1: G, M2: bitstring, nonce1: nonce, isFresh: bool));
@@ -115,14 +114,13 @@ let processCenter(s: key, k:key, SCN: bitstring, ri: bitstring, rj: bitstring, C
 	let pk = Hash(Concat(Concat(G2(ps), G2(M1)), CID)) in
 	let (temp1: bitstring, VID: bitstring) = Split(dec(M2, bit2key(pk))) in
 	let (temp2: bitstring, e: bitstring) = Split(temp1) in
-	let (UID, bitX) = Split(temp2) in
+	let (UID:bitstring, bitX:bitstring) = Split(temp2) in
 	let X = bit2G(bitX) in
 	let a = Hash(Concat(Concat(UID, key2(k)), ri)) in
 	let b = Hash(Concat(SCN, key2(k))) in
 	let d = Hash(Concat(Concat(bitX, UID), CID)) in
 	let e' = Hash(Concat(Concat(Concat(UID, a), b), nonce2bit(nonce1))) in
-	let M1' = exp(g, add(bit2exponent(a), mul(X, bit2exponent(d)))) in
-	if e = e' && M1 = M1' then
+	if e = e' then
 	new y: exponent;
 	new nonce2: nonce;
 	let Y = exp(g, y) in
@@ -132,8 +130,8 @@ let processCenter(s: key, k:key, SCN: bitstring, ri: bitstring, rj: bitstring, C
 
 	let vk = bit2key(Hash(Concat(Concat(VID, key2(k)), rj))) in
 	let tk = Hash(Concat(Concat(Concat(Concat(UID, VID), CID), G2(psk)), nonce2bit(nonce2))) in
-	let M3 = enc(Concat(Concat(Concat(Concat(Concat(UID, VID), CID), tk), nonce2bit(nonce1)), nonce2bit(nonce2)), vk)
-	let M4 = Hash(Concat(Concat(Concat(Concat(UID, VID), CID), tk), nonce2bit(nonce1)), nonce2bit(nonce2)), key2(vk))) in
+	let M3 = enc(Concat(Concat(Concat(Concat(Concat(UID, VID), CID), tk), nonce2bit(nonce1)), nonce2bit(nonce2)), vk) in
+	let M4 = Hash(Concat(Concat(Concat(Concat(Concat(Concat(UID, VID), CID), tk), nonce2bit(nonce1)), nonce2bit(nonce2)), key2(vk))) in
 	out(c_cv, (M3, M4));
 
 	in(c_cv, (nonce3: nonce, M5: bitstring, n3IsFresh: bool));
@@ -147,19 +145,19 @@ let processCenter(s: key, k:key, SCN: bitstring, ri: bitstring, rj: bitstring, C
 
 let processVehicle(VID: bitstring, vk: key) = 
   in(c_cv, (M3: bitstring, M4: bitstring));
-  let (temp1, vkBit) = Split(dec(M3, vk)) in
-  let (temp2, nonce2Bit) = Split(temp1) in
-  let (temp3, nonce1Bit) = Split(temp2) in
-  let (temp4, tk) = Split(temp3) in
-  let (temp5, CID) = Split(temp4) in
-  let (UID, VID) = Split(temp5) in
+  let (temp1:bitstring, vkBit:bitstring) = Split(dec(M3, vk)) in
+  let (temp2:bitstring, nonce2Bit:bitstring) = Split(temp1) in
+  let (temp3:bitstring, nonce1Bit:bitstring) = Split(temp2) in
+  let (temp4:bitstring, tk:bitstring) = Split(temp3) in
+  let (temp5:bitstring, CID:bitstring) = Split(temp4) in
+  let (UID:bitstring, VID:bitstring) = Split(temp5) in
 
-  let M4' = Hash(Concat(Concat(Concat(Concat(UID, VID), CID), tk), nonce1Bit), nonce2Bit), key2(vk))) in
+  let M4' = Hash(Concat(Concat(Concat(Concat(Concat(Concat(UID, VID), CID), tk), nonce1Bit), nonce2Bit), key2(vk))) in
   if M4 = M4' then
   new nonce3: nonce;
   let vcsk = Hash(Concat(Concat(Concat(Concat(VID, CID), nonce2Bit), nonce2bit(nonce3)), key2(vk))) in
-  let uvsk = Hash(Concat(Concat(Concat(Concat(Concat(Concat(UID, VID), CID), tk), nonce2Bit), nonce2bit(nonce3))) in
-	event VehicleGen(center, user);
+  let uvsk = Hash(Concat(Concat(Concat(Concat(Concat(UID, VID), CID), tk), nonce2Bit), nonce2bit(nonce3))) in
+	event vehicleGen(center, user);
 
   let M5 = Hash(Concat(Concat(Concat(Concat(Concat(UID, VID), CID), nonce1Bit), nonce2bit(nonce3)), key2(vk))) in
   out(c_cv, (nonce3, M5, true)).
