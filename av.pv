@@ -1,0 +1,201 @@
+free c_uc:channel.
+free c_cv:channel.
+
+type key.
+type nonce.
+type biometric.
+type template.
+type G.
+type exponent.
+type User.
+type Center.
+type Vehicle.
+
+(* Hash operation *)
+fun Hash(bitstring): bitstring.
+(* KeyTPGen operation *)
+fun TemplateGen(biometric): template.
+fun KeyGen(biometric): key.
+reduc forall bio: biometric; KeyRel(bio, TemplateGen(bio)) = KeyGen(bio).
+(* Symmetric encryption *)
+fun enc(bitstring, key): bitstring.
+reduc forall x: bitstring, y: key; dec(enc(x, y), y) = x.
+(* XOR operation *)
+fun XOR(bitstring, bitstring): bitstring.
+reduc forall x: bitstring, y: bitstring; XORagain(XOR(x, y), y) = x.
+const g: G.
+(* Add operation *)
+fun add(exponent, exponent): exponent.
+(* Exponential operation *)
+fun exp(G, exponent): G.
+equation forall x: exponent, y: exponent; exp(exp(g, x), y) = exp(exp(g, y), x).
+(* Multiply operation *)
+fun mul(exponent, exponent): exponent.
+equation forall x: exponent, y: exponent; add(x, y) = add(y, x).
+equation forall x: exponent, y: exponent; mul(x, y) = mul(y, x). 
+(* Mod operation *)
+fun Mod(bitstring, bitstring): bitstring.
+(* Concat operation *)
+fun Concat(bitstring, bitstring):bitstring.
+reduc forall x: bitstring, y: bitstring; Split(Concat(x, y)) = (x, y).
+(* Type convertion *)
+fun G2(G): bitstring.
+reduc forall x: G; bit2G(G2(x)) = x.
+fun exponent2(exponent): bitstring.
+reduc forall x: exponent; bit2exponent(exponent2(x)) = x.
+fun bit2key(bitstring): key.
+fun key2exponent(key): exponent.
+reduc forall x: key; exponent2key(key2exponent(x)) = x.
+fun key2(key): bitstring.
+fun nonce2bit(nonce): bitstring.
+(* Check nonce fresh *)
+fun checkFresh(nonce, bool): bool
+	reduc forall t: nonce; checkFresh(t, true) = true
+	otherwise forall t: nonce; checkFresh(t, false) = false.
+
+
+(* Secrecy assumptions *)
+not attacker(new g).
+not attacker(new s).
+not attacker(new k).
+
+(* party join in communication *)
+free user: User.
+free center: Center.
+free vehicle: Vehicle.
+
+(* Queries *)
+free SKcc: key[private].
+query attacker(ucsk);
+		attacker(uvsk);
+		attacker(vcsk);
+
+event scAccept(User).
+event centerAcceptGen(User).
+event vehicleGen(Center, User).
+event centerGen(Vehicle).
+event userGen(Center, Vehicle).
+
+query inj-event(userGen(center, vehicle)) ==> inj-event(centerGen(vehicle)).
+query inj-event(centerGen(vehicle)) ==> inj-event(vehicleGen(center, user)).
+query inj-event(vehicleGen(center, user)) ==> inj-event(centerAccept(user)).
+query event(centerAcceptGen(user)) ==> event(scAccept(user)).
+
+let processUser(S: G, UID': bitstring, PW': bitstring, bio': biometric, tp: template, l:bitstring, c: bitstring, A: bitstring, B: bitstring, CID: bitstring, VID: bitstring) =
+	let bk' = KeyRel(bio', tp) in
+	let c' = Hash(Mod(Hash(Concat(Concat(UID', PW'), key2(bk'))), l)) in
+	if c' = c then
+	event scAccept(user);
+	let a = XORagain(A, Hash(Concat(Concat(UID', PW'), key2(bk')))) in
+	let b = XORagain(B, Hash(Concat(Concat(UID', PW'), key2(bk')))) in
+	new x: exponent;
+	new nonce1: nonce;
+	let X = exp(g, x) in
+	let d = bit2exponent(Hash(Concat(Concat(G2(X), UID') ,CID))) in
+	let M1 = exp(g, add(bit2exponent(a), mul(x, d))) in
+	let ps = exp(S, add(bit2exponent(a), mul(x, d))) in
+	let e = Hash(Concat(Concat(Concat(UID', a), b), nonce2bit(nonce1))) in
+	let pk = Hash(Concat(Concat(G2(ps), G2(M1)), CID)) in
+	let M2 = enc(Hash(Concat(Concat(Concat(ID', G2(X)), e), VID)), bit2key(pk)) in
+	out(c_uc, (M1, M2, nonce1, true));
+
+	in(c_uc, (Y: G, M6: bitstring, nonce2: nonce, nonce3: nonce));
+	let psk = exp(Y, x) in
+	let M6' = Hash(Concat(Concat(Concat(Concat(Concat(Concat(Concat(Concat(UID, CID), G2(Y)), pk), a), G2(psk)), nonce2bit(nonce1)), nonce2bit(nonce2)), nonce2bit(nonce3))) in
+	if M6 = M6' then
+	let tk = Hash(Concat(Concat(Concat(Concat(UID, VID), CID), G2(psk)), nonce2bit(nonce2))) in
+	let ucsk = Hash(Concat(Concat(Concat(Concat(Concat(Concat(UID, CID), G2(X)), G2(Y)), pk), a), G2(psk))) in
+	let uvsk = Hash(Concat(Concat(Concat(Concat(Concat(Concat(UID, VID), CID), tk), nonce2bit(nonce2)), nonce2bit(nonce3))) in
+	event userGen(center, vehicle);
+
+let processCenter(s: key, k:key, SCN: bitstring, ri: bitstring, rj: bitstring, CID: bitstring) = 
+	in(c_uc, (M1: G, M2: bitstring, nonce1: nonce, isFresh: bool));
+	if checkFresh(nonce1, isFresh) then
+	let ps = exp(M1, key2exponent(s)) in
+	let pk = Hash(Concat(Concat(G2(ps), G2(M1)), CID)) in
+	let (temp1: bitstring, VID: bitstring) = Split(dec(M2, bit2key(pk))) in
+	let (temp2: bitstring, e: bitstring) = Split(temp1) in
+	let (UID, bitX) = Split(temp2) in
+	let X = bit2G(bitX) in
+	let a = Hash(Concat(Concat(UID, key2(k)), ri)) in
+	let b = Hash(Concat(SCN, key2(k))) in
+	let d = Hash(Concat(Concat(bitX, UID), CID)) in
+	let e' = Hash(Concat(Concat(Concat(UID, a), b), nonce2bit(nonce1))) in
+	let M1' = exp(g, add(bit2exponent(a), mul(X, bit2exponent(d)))) in
+	if e = e' && M1 = M1' then
+	new y: exponent;
+	new nonce2: nonce;
+	let Y = exp(g, y) in
+	let psk = exp(X, y) in
+	let ucsk = Hash(Concat(Concat(Concat(Concat(Concat(Concat(UID, CID), bitX), G2(Y)), pk), a), G2(psk))) in
+	event centerAcceptGen(user);
+
+	let vk = bit2key(Hash(Concat(Concat(VID, key2(k)), rj))) in
+	let tk = Hash(Concat(Concat(Concat(Concat(UID, VID), CID), G2(psk)), nonce2bit(nonce2))) in
+	let M3 = enc(Concat(Concat(Concat(Concat(Concat(UID, VID), CID), tk), nonce2bit(nonce1)), nonce2bit(nonce2)), vk)
+	let M4 = Hash(Concat(Concat(Concat(Concat(UID, VID), CID), tk), nonce2bit(nonce1)), nonce2bit(nonce2)), key2(vk))) in
+	out(c_cv, (M3, M4));
+
+	in(c_cv, (nonce3: nonce, M5: bitstring, n3IsFresh: bool));
+	if checkFresh(nonce3, n3IsFresh) then
+	let M5' = Hash(Concat(Concat(Concat(Concat(Concat(UID, VID), CID), nonce2bit(nonce1)), nonce2bit(nonce3)), key2(vk))) in
+	let vcsk = Hash(Concat(Concat(Concat(Concat(VID, CID), nonce2bit(nonce2)), nonce2bit(nonce3)), key2(vk))) in
+	event centerGen(vehicle);
+
+	let M6 = Hash(Concat(Concat(Concat(Concat(Concat(Concat(Concat(Concat(UID, CID), G2(Y)), pk), a), G2(psk)), nonce2bit(nonce1)), nonce2bit(nonce2)), nonce2bit(nonce3))) in
+	out(c_uc, (Y, M6, nonce2, nonce3)).
+
+let processVehicle(VID: bitstring, vk: key) = 
+  in(c_cv, (M3: bitstring, M4: bitstring));
+  let (temp1, vkBit) = Split(dec(M3, vk)) in
+  let (temp2, nonce2Bit) = Split(temp1) in
+  let (temp3, nonce1Bit) = Split(temp2) in
+  let (temp4, tk) = Split(temp3) in
+  let (temp5, CID) = Split(temp4) in
+  let (UID, VID) = Split(temp5) in
+
+  let M4' = Hash(Concat(Concat(Concat(Concat(UID, VID), CID), tk), nonce1Bit), nonce2Bit), key2(vk))) in
+  if M4 = M4' then
+  new nonce3: nonce;
+  let vcsk = Hash(Concat(Concat(Concat(Concat(VID, CID), nonce2Bit), nonce2bit(nonce3)), key2(vk))) in
+  let uvsk = Hash(Concat(Concat(Concat(Concat(Concat(Concat(UID, VID), CID), tk), nonce2Bit), nonce2bit(nonce3))) in
+	event VehicleGen(center, user);
+
+  let M5 = Hash(Concat(Concat(Concat(Concat(Concat(UID, VID), CID), nonce1Bit), nonce2bit(nonce3)), key2(vk))) in
+  out(c_cv, (nonce3, M5, true)).
+
+
+(* Start process *)
+process
+		(* Constants *)
+		(* Share constants between user and center *)
+		new CID: bitstring;
+		new UID: bitstring;
+		new VID: bitstring;
+		new l: bitstring;
+		new SCN: bitstring;
+		(* User/Smartcard constants *)
+		new PW: bitstring;
+		new bio: biometric;
+		(* Center constants *)
+		new s: key;
+		new k: key;
+		new ri: bitstring;
+		new rj: bitstring;
+		(* Constans computed *)
+		let a = Hash(Concat(Concat(UID, key2(k)), ri)) in
+		let b = Hash(Concat(SCN, key2(k))) in
+		let S = exp(g, key2exponent(s)) in
+		let tp = TemplateGen(bio) in
+		let bk = KeyGen(bio) in
+		let c = Hash(Mod(Hash(Concat(Concat(UID, PW), key2(bk))), l)) in
+		let A = XOR(a, Hash(Concat(Concat(UID, PW), key2(bk)))) in
+		let B = XOR(b, Hash(Concat(Concat(UID, PW), key2(bk)))) in
+
+		let vk = bit2key(Hash(Concat(Concat(VID, key2(k)), rj))) in
+
+		(
+		  (!(processUser(S, UID, PW, bio, tp, l, c, A, B, CID, VID))) |
+		  (!processCenter(s, k, SCN, ri, rj, CID)) |
+		  (!processVehicle(VID, vk))
+		)
